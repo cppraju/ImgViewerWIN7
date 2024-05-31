@@ -1,0 +1,129 @@
+// ThumbWnd.cpp : implementation file
+//
+
+
+#include "common.h"
+#include "ImgViewer.h"
+#include "ThumbWnd.h"
+#include "UtilityHelper.h"
+#include "gdiphelper.h"
+#include "resource.h"
+// CThumbWnd
+
+
+
+extern CImgWinApp theApp;
+
+
+IMPLEMENT_DYNCREATE(CThumbWnd, CListCtrl)
+
+CThumbWnd::CThumbWnd()
+{
+	
+}
+
+CThumbWnd::~CThumbWnd()
+{
+}
+
+
+BEGIN_MESSAGE_MAP(CThumbWnd, CListCtrl)
+//	ON_WM_CTLCOLOR()
+ON_WM_MOUSEMOVE()
+END_MESSAGE_MAP()
+
+
+
+// CThumbWnd message handlers
+
+bool CThumbWnd::LoadThumbNailsFromFolder(void)
+{
+	bool bRet = false;
+
+
+	return(bRet);
+}
+
+BOOL CThumbWnd::Create(LPCTSTR lpszClassName, LPCTSTR lpszWindowName, DWORD dwStyle, const RECT& rect, CWnd* pParentWnd, UINT nID, CCreateContext* pContext)
+{
+	// TODO: Add your specialized code here and/or call the base class
+	memset(&wc, 0, sizeof(WNDCLASS));
+	wc.style = CS_DBLCLKS | CS_HREDRAW | CS_VREDRAW;
+	wc.lpfnWndProc = AfxWndProc;
+	wc.hInstance = AfxGetInstanceHandle();
+	wc.hbrBackground = (HBRUSH)NULL;//(COLOR_WINDOW + 1);
+	wc.hCursor = LoadCursor(wc.hInstance, IDC_CROSS);
+	wc.lpszClassName = _T("ThumbViewWndClass");
+	AfxRegisterClass(&wc);
+	if(CWnd::Create(lpszClassName, lpszWindowName, dwStyle|LVS_ICON, rect, pParentWnd, nID, pContext))
+		OnInitialUpdate();
+	return(TRUE);
+}
+
+void CThumbWnd::OnInitialUpdate()
+{
+	//	CListCtrl::OnInitialUpdate();
+	// TODO: Add your specialized code here and/or call the base class
+	OutputDebugString(_T("CThumbWnd::OnInitialUpdate *******************************>>>>"));
+	bm.LoadBitmapW(MAKEINTRESOURCE(IDB_BITMAP_THUMBBR));
+
+	br.CreatePatternBrush(&bm);
+	HBRUSH hb = (HBRUSH)br;
+#ifdef _DEBUG
+	::SetLastError(0);
+#endif
+	DWORD dwRet = ::SetClassLongPtr(m_hWnd, GCL_HBRBACKGROUND, (LONG_PTR)(HBRUSH)br);
+	hCurGrip = ::LoadCursor(theApp.m_hInstance, MAKEINTRESOURCE(IDC_CURSOR_SELECT));
+	dwRet = ::SetClassLong(this->m_hWnd, GCL_HCURSOR, (LONG_PTR)hCurGrip);
+	::SetCursor(hCurGrip);
+#ifdef _DEBUG
+	{
+		TCHAR xxx[128];
+		_stprintf_s(xxx, sizeof(xxx)/sizeof(TCHAR), _T("CThumbWnd::OnInitialUpdate() SetClassLong Return: %d LastErr: %d"), dwRet, ::GetLastError());
+		writelog(xxx);
+	}
+#endif
+}
+
+void CThumbWnd::UpdateCurrentFolder(const TCHAR *ptchCurrentDir)
+{
+	if(lstImgFile.GetCount() > 0)
+	{
+		lstImgFile.RemoveAll();
+		m_ImgLst.DeleteImageList();
+	}
+	lstrcpy(tchPath, ptchCurrentDir);
+
+	(CUtilityHelper::GetInstance())->FindImageFilesInFolder(tchPath, lstImgFile);
+	POSITION pos = lstImgFile.GetHeadPosition();
+	for(int i = 0; i < lstImgFile.GetCount(); i = i + 1)
+		writelog(lstImgFile.GetNext(pos));
+	//get the window rect
+	CRect rec;
+	GetClientRect(&rec);
+	m_ImgLst.Create((rec.right/3)*2, (rec.right/3)*2, ILC_MASK, lstImgFile.GetCount(), lstImgFile.GetCount()/10);
+	short sImgCnt = CGdipHelper::GetInstance()->PrepareThumbnails(m_ImgLst, (rec.right/3)*2, (rec.right/3)*2, lstImgFile);
+	//ifsImgCnt == lstImgFile.GetCount() then thumbnails for all the files are generated
+	//set the CImageList with the listctrl
+	LoadThumbNailsFromFolder();
+}
+
+
+//HBRUSH CThumbWnd::OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor)
+//{
+//	HBRUSH hbr = CListCtrl::OnCtlColor(pDC, pWnd, nCtlColor);
+//	writelog(_T("CThumbWnd::OnCtlColor *******************************>>>>"));
+//	// TODO:  Change any attributes of the DC here
+//	bm.LoadBitmapW(MAKEINTRESOURCE(IDB_BITMAP_BKFRAME_BRUSH));
+//	br.CreatePatternBrush(&bm);
+//	hbr = (HBRUSH)br;
+//	// TODO:  Return a different brush if the default is not desired
+//	return hbr;
+//}
+
+void CThumbWnd::OnMouseMove(UINT nFlags, CPoint point)
+{
+	// TODO: Add your message handler code here and/or call default
+	
+	CListCtrl::OnMouseMove(nFlags, point);
+}
