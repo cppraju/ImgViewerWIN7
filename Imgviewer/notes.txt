@@ -1,0 +1,90 @@
+here are some functiones we need to look into :
+
+
+CImgWinApp	-	The main CWinApp derive class
+CImgViewFrame	-	The CFrameWnd derive class. This is split into two parts. The left side CThumbWnd and the right side CImgViewWnd.
+CThumbWnd	-	The left pane of the splitterwnd. Derived from CWnd. This will only show the thumbnail view of all the images in the currently selected directory.
+CImgViewWnd	-	This is the right pane and is derived from the CWnd. This will display the selected image in actual size or zoomed with or without special effects.
+
+UpdateDialogControls(this, FALSE);
+
+
+
+((CButton*)m_MainDlgBar.GetDlgItem(IDC_BUTTON_DIR))->SetIcon(hico);
+
+25/6/2019
+The following code works
+
+	OPENFILENAME ofn;
+	TCHAR strFilter[1024];
+	TCHAR strFilePath[256];
+	TCHAR strDefExt[4];
+	TCHAR strCurDir[64];
+	DWORD dwErr; 
+		//get the file name
+	memset(&ofn, 0, sizeof(OPENFILENAME));
+	//_stprintf_s(strFilter, sizeof(strFilter), _T("Monochrome Bitmap (*.bmp, *.dib)\0 *.bmp;*.dib\016 Color Bitmap   (*.bmp, *.dib)\0 *.bmp;*.dib\0256 Color Bitmap   (*.bmp, *.dib)\0 *.bmp;*.dib\024-Bit Bitmap  (*.bmp, *.dib)\0 *.bmp;*.dib\0Icon  (*.ico)\0  *.ico\0Cursor  (*.cur)\0 *.cur\0\0"));
+	//memcpy_s(strFilter, sizeof(strFilter), "Monochrome Bitmap (*.bmp, *.dib)\0 *.bmp\0 16 Color Bitmap   (*.bmp, *.dib)\0 *.bmp\0 256 Color Bitmap   (*.bmp, *.dib)\0 *.bmp\0 24-Bit Bitmap  (*.bmp, *.dib)\0 *.bmp\0 Icon  (*.ico)\0  *.ico\0 Cursor  (*.cur)\0 *.cur\0\0", sizeof(strFilter));
+	memset(strFilter, 0, sizeof(strFilter));
+	memcpy(strFilter, _T("Tif Image (*.tif, *.tiff)\0*.tiff;*.tif\0Png Image (*.png)\0*.png\0Bitmap Image (*.bmp)\0*.bmp\0JPEG (*.jpg)\0*.jpg\0Enhanced Meta File (*.emf)\0*.emf\0All Supported Files\0*.tiff;*.tif;*.bmp;*.png;*.jpg;*.gif;*.emf;*.ico;*.cur\0\0"), 512);
+	ofn.lStructSize = sizeof(OPENFILENAME); 
+	ofn.hwndOwner = this->m_hWnd; 
+	ofn.lpstrFilter = strFilter;//_T("Tif Image (*.tif, *.tiff)\0*.tiff;*.tif\0Png Image (*.png)\0*.png\0Bitmap Image (*.bmp)\0*.bmp\0JPEG (*.jpg)\0*.jpg\0Enhanced Meta File (*.emf)\0*.emf\0All Supported Files\0*.tiff;*.tif;*.bmp;*.png;*.jpg;*.gif;*.emf;*.ico;*.cur\0\0"); 
+	ofn.nFilterIndex = 6;
+	memset(strFilePath, 0, sizeof(strFilePath));
+	ofn.lpstrFile = strFilePath; 
+	ofn.nMaxFile = sizeof(strFilePath)/sizeof(TCHAR); 
+	memset(strCurDir, 0, sizeof(strCurDir));
+	::GetCurrentDirectory(sizeof(strCurDir), strCurDir);
+	ofn.lpstrInitialDir = strCurDir;
+	//this function is causing issues call this with 2 params which will invoke the template function
+	//wcscpy_s(strDefExt, sizeof(strDefExt), _T("tif")); 
+	_tcscpy(strDefExt,  _T("tif")); 
+	ofn.lpstrDefExt = strDefExt;
+	ofn.Flags = OFN_SHOWHELP|OFN_LONGNAMES|OFN_PATHMUSTEXIST|OFN_FILEMUSTEXIST; 
+	dwErr = ::GetOpenFileName(&ofn);
+	if(dwErr == 0)
+	{
+		TCHAR xxx[256];
+		_stprintf(xxx,  _T("FileOpenDlg return: %d Extended Err: %d"), dwErr, ::CommDlgExtendedError());
+
+		OutputDebugString(strDefExt);
+		return; 
+	}
+
+
+	UINT CDwmDlgDlg::OnNcHitTest(CPoint point) 
+{
+	// TODO: Add your message handler code here and/or call default
+	if(CDialog::OnNcHitTest(point) == HTCLIENT)
+	return (HTCAPTION);
+	else
+		return(CDialog::OnNcHitTest(point));
+}
+
+
+	CRect dlgrec;
+	m_MainDlgBar.GetWindowRect(&dlgrec);
+	::GetWindowRect(m_MainDlgBar.m_hWnd, dlgrec);
+#ifdef _DEBUG
+	{
+		TCHAR xxx[128];
+		_stprintf_s(xxx, sizeof(xxx)/sizeof(TCHAR), _T("CImgViewFrame::OnCreate() dlgbar L: %d T: %d R: %d B: %d"), dlgrec.left, dlgrec.top, dlgrec.right, dlgrec.bottom );
+		OutputDebugString(xxx);
+	}
+#endif
+//	ScreenToClient(&dlgrec);
+	HRGN hrgnDlgBk = ::CreateRectRgn(dlgrec.left, dlgrec.top, dlgrec.right, dlgrec.bottom);
+	//HRGN hrgnWnd = Get
+	HDC hDC = ::GetDC(m_hWnd);
+	//SelectClipRgn(hDC, hrgnDlgBk);
+	::ReleaseDC(m_hWnd, hDC);
+	
+	HRGN hrgnDlgDiff = ::CreateRectRgn(0, 0, 0, 0);
+if(	::CombineRgn(hrgnDlgDiff, hrgnDlg, hrgn, RGN_XOR) != ERROR)
+{
+	HRGN hrgnDlgTxt = ::CreateRectRgn(0, 0, 0, 0);
+	if(::CombineRgn(hrgnDlgTxt, hrgnDlgDiff, hrgnTxt, RGN_OR) != ERROR)
+		m_MainDlgBar.SetWindowRgn(hrgnDlgTxt, TRUE);
+}
+		
